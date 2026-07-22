@@ -7,4 +7,5 @@ int main() {
 	baza.KreirajTabelu();
 	baza.KreirajIndex();
 	cout << "Gotovo" << endl;
+	
 }

@@ -11,4 +11,7 @@ public:
 	void IzvrsiUpit(string sql,string PORUKAGRESKE);
 	void KreirajTabelu();
 	void KreirajIndex();
+	void DodajSobu(int BrojSobe, int kapacitet, int Cijena);
+	void AzurirajStatusSobe(int BrojSobe, string NoviStatus);
+	void PrikaziSveSobe();
 };
