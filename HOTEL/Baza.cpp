@@ -24,7 +24,7 @@ void Baza::KreirajTabelu() {
 		"BrojSobe INTEGER NOT NULL UNIQUE,"
 		"SmjestajniKapacitet INTEGER NOT NULL,"
 		"CijenaPoDanu INTEGER NOT NULL,"
-		"StatusSobe TEXT NOT NULL DEFAULT 'slobodna' CHECK(StatusSobe IN('slobodna','zauzeta')));";
+		"StatusSobe TEXT NOT NULL DEFAULT 'slobodna' CHECK(StatusSobe IN('slobodna','zauzeta','na odrzavanju')));";
 	IzvrsiUpit(sqlSoba, "GRESKA PRI KREIRANJU TABELE SOBE");
 
 	string sqlGost =
