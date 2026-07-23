@@ -14,9 +14,14 @@ int main() {
 	baza.DodajGostaIZakaziRezervaciju("Ivan Ivic", "112233", "ivan.ivic@gmail.com", 1, "2026-07-30", "2026-08-05");
 	baza.AzurirajStatusRezervacijeIStatusSobe(1, 1, "u toku");
 	baza.ZakaziRezervacijuPostojecemGostu("112233", 3, "2026-10-15", "2026-10-22");
-	//baza.PrikaziSveGoste();
+	baza.PrikaziSveGoste();
 	baza.PrikaziSveRezervacije();
-	//baza.PrikaziSveSobe();
+	baza.PrikaziSveSobe();
 	baza.PrikaziSveRezervacijePremaStatusu("u toku");
+	baza.KreirajRacun(1, "2026-07-30", "gotovina");
+	baza.AzurirajStatusRacuna(1, "placen");
+	baza.AzurirajNacinPlacanja(1, "kartica");
+	baza.PrikaziSveRacune();
+	baza.PrikaziSveRacunePremaStatusu("placen");
 
 }

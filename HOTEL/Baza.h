@@ -20,4 +20,9 @@ public:
 	void PrikaziSveRezervacijePremaStatusu(string Status);
 	void PrikaziSveGoste();
 	void PrikaziSveRezervacije();
+	void KreirajRacun(int RezervacijID, string Datum, string NacinPlacanja);
+	void AzurirajStatusRacuna(int RezervacijaID,string NoviStatus);
+	void AzurirajNacinPlacanja(int RezervacijaID, string NoviNacin);
+	void PrikaziSveRacune();
+	void PrikaziSveRacunePremaStatusu(string Status);
 };
