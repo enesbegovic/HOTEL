@@ -16,6 +16,8 @@ public:
 	void PrikaziSveSobe();
 	void DodajGostaIZakaziRezervaciju(string ImePrezime, string JMBG, string email, int BrojSobe, string Pocetak, string Kraj);
 	void AzurirajStatusRezervacijeIStatusSobe(int RezervacijaID, int BrojSobe, string NoviStatus);
+	void ZakaziRezervacijuPostojecemGostu(string JMBG, int BrojSobe, string Pocetak, string Kraj);
+	void PrikaziSveRezervacijePremaStatusu(string Status);
 	void PrikaziSveGoste();
 	void PrikaziSveRezervacije();
 };

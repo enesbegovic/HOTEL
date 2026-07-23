@@ -3,5 +3,5 @@
     <Platform Name="x64" />
     <Platform Name="x86" />
   </Configurations>
-  <Project Path="HOTEL/HOTEL.vcxproj" />
+  <Project Path="HOTEL/HOTEL.vcxproj" Id="a571e904-1679-40a4-857c-707a22c88bbf" />
 </Solution>
