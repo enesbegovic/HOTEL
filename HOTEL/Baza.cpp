@@ -55,7 +55,7 @@ void Baza::KreirajTabelu() {
 		"UkupanIznosRacuna REAL NOT NULL,"
 		"NacinPlacanja TEXT NOT NULL DEFAULT 'gotovina' CHECK(NacinPlacanja IN('gotovina','kartica')),"
 		"StatusRacuna TEXT NOT NULL DEFAULT 'neplacen' CHECK(StatusRacuna IN('placen','neplacen')),"
-		"FOREIGN KEY (RezervacijaID) REFERENCES Racuni(ID) ON DELETE RESTRICT);";
+		"FOREIGN KEY (RezervacijaID) REFERENCES Rezervacije(ID) ON DELETE RESTRICT);";
 	IzvrsiUpit(sqlRacun, "GRESKA PRI KREIRANJU TABELE RACUNI");
 }
 void Baza::KreirajIndex() {
@@ -128,6 +128,32 @@ void Baza::PrikaziSveSobe() {
 		cout << "GRESKA PRI PRIPREMI PRIKAZA:" << sqlite3_errmsg(db) << endl;
 		return;
 	}
+	while (sqlite3_step(stmt) == SQLITE_ROW) {
+		int ID = sqlite3_column_int(stmt, 0);
+		int BrojSobe = sqlite3_column_int(stmt, 1);
+		int Kapacitet = sqlite3_column_int(stmt, 2);
+		int Cijena = sqlite3_column_int(stmt, 3);
+		string Status = (const char*)sqlite3_column_text(stmt, 4);
+
+		cout << "ID:" << ID << endl;
+		cout << "Broj Sobe:" << BrojSobe << endl;
+		cout << "Kapacitet Sobe/Broj Osoba Koje Soba Moze Primiti:" << Kapacitet << endl;
+		cout << "Cijena Po Danu:" << Cijena << " KM" << endl;
+		cout << "Status:" << Status << endl;
+		cout << "---" << endl;
+	}
+	sqlite3_finalize(stmt);
+}
+void Baza::PrikaziSveSobePremaStatusu(string Status) {
+	sqlite3_stmt* stmt;
+	string sql =
+		"SELECT * FROM Sobe WHERE StatusSobe=?;";
+	int rc = sqlite3_prepare_v2(db, sql.c_str(), -1, &stmt, nullptr);
+	if (rc != SQLITE_OK) {
+		cout << "GRESKA PRI PRIPREMI PRIKAZA:" << sqlite3_errmsg(db) << endl;
+		return;
+	}
+	sqlite3_bind_text(stmt, 1, Status.c_str(), -1, SQLITE_TRANSIENT);
 	while (sqlite3_step(stmt) == SQLITE_ROW) {
 		int ID = sqlite3_column_int(stmt, 0);
 		int BrojSobe = sqlite3_column_int(stmt, 1);
@@ -477,7 +503,7 @@ void Baza::KreirajRacun(int RezervacijID, string Datum, string NacinPlacanja) {
 		cout << "GRESKA PRI KREIRANJU RACUNA:" << sqlite3_errmsg(db) << endl;
 		return;
 	}
-	cout << "RACUN USPJESNO KREIRAN,UKUPAN IZNOS RACUNA-" << UkupanIznos << endl;
+	cout << "RACUN USPJESNO KREIRAN,UKUPAN IZNOS RACUNA-" << UkupanIznos <<" KM"<< endl;
 }
 void Baza::AzurirajStatusRacuna(int RezervacijaID,string NoviStatus) {
 	sqlite3_stmt* stmt;
@@ -496,7 +522,7 @@ void Baza::AzurirajStatusRacuna(int RezervacijaID,string NoviStatus) {
 		cout << "GRESKA PRI AZURIRANJU RACUNA:" << sqlite3_errmsg(db) << endl;
 		return;
 	}
-	cout << "USPJESNO AZURIRAN STATUS PLACANJA" << endl;
+	cout << "USPJESNO AZURIRAN STATUS RACUNA" << endl;
 }
 void Baza::AzurirajNacinPlacanja(int RezervacijaID, string NoviNacin) {
 	sqlite3_stmt* stmt;
