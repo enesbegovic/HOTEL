@@ -47,6 +47,3 @@ Sve tabele koriste FOREIGN KEY i CHECK constraint za integritet podataka.
 ## Pokretanje
 
 Otvoriti `HOTEL.sln` u Visual Studiu, buildati (x64/Debug), pokrenuti preko Local Windows Debugger.
-## Pokretanje
-
-Otvoriti `HOTEL.sln` u Visual Studiu, buildati (x64/Debug), pokrenuti preko Local Windows Debugger.
