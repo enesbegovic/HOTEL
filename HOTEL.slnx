@@ -4,4 +4,5 @@
     <Platform Name="x86" />
   </Configurations>
   <Project Path="HOTEL/HOTEL.vcxproj" Id="a571e904-1679-40a4-857c-707a22c88bbf" />
+  <Project Path="HOTEL_Testovi/HOTEL_Testovi.vcxproj" Id="0593e599-b7fd-474c-91d9-4d9a9bd3c45d" />
 </Solution>

@@ -2,8 +2,8 @@
 #include<string>
 #include"Baza.h"
 using namespace std;
-Baza::Baza() {
-	sqlite3_open("HOTEL.db", &db);
+Baza::Baza(string PutanjaBaze) {
+	sqlite3_open(PutanjaBaze.c_str(), &db);
 	sqlite3_exec(db, "PRAGMA foreign_keys=ON;", nullptr, nullptr, nullptr);
 }
 Baza::~Baza() {
@@ -144,6 +144,22 @@ void Baza::PrikaziSveSobe() {
 	}
 	sqlite3_finalize(stmt);
 }
+int Baza::BrojSoba() {
+	sqlite3_stmt* stmt;
+	string sql =
+		"SELECT COUNT (*) FROM Sobe;";
+	int rc = sqlite3_prepare_v2(db, sql.c_str(), -1, &stmt, nullptr);
+	if (rc != SQLITE_OK) {
+		cout << "GRESKA PRI PRIPREMI BROJANJA SOBA:" << sqlite3_errmsg(db) << endl;
+		return -1;
+	}
+	int count = 0;
+	if (sqlite3_step(stmt) == SQLITE_ROW) {
+		count = sqlite3_column_int(stmt, 0);
+	}
+	sqlite3_finalize(stmt);
+	return count;
+}
 void Baza::PrikaziSveSobePremaStatusu(string Status) {
 	sqlite3_stmt* stmt;
 	string sql =
@@ -208,6 +224,28 @@ void Baza::DodajGostaIZakaziRezervaciju(string ImePrezime, string JMBG, string e
 	sqlite3_finalize(stmtProvjeraSobe);
 	if (SobaID == 0) {
 		cout << "GRESKA PRI DODAVANJU REZERVACIJE-NE POSTOJI TRAZENA SOBA" << endl;
+		IzvrsiUpit("ROLLBACK;", "GRESKA PRI ROLLBACK-u");
+		return;
+	}
+	sqlite3_stmt* stmtProvjeraRezervacije;
+	int count = 0;
+	string sqlProvjeraRezervacije =
+		"SELECT COUNT (*) FROM Rezervacije WHERE SobaID=? AND Pocetak=? AND Kraj=?;";
+	int rc3 = sqlite3_prepare_v2(db, sqlProvjeraRezervacije.c_str(), -1, &stmtProvjeraRezervacije, nullptr);
+	if (rc3 != SQLITE_OK) {
+		cout << "GRESKA PRI PRIPREMI PROVJERE REZERVACIJE:" << sqlite3_errmsg(db) << endl;
+		IzvrsiUpit("ROLLBACK;", "GRESKA PRI ROLLBACK-u");
+		return;
+	}
+	sqlite3_bind_int(stmtProvjeraRezervacije, 1, SobaID);
+	sqlite3_bind_text(stmtProvjeraRezervacije, 2, Pocetak.c_str(), -1, SQLITE_TRANSIENT);
+	sqlite3_bind_text(stmtProvjeraRezervacije, 3, Kraj.c_str(), -1, SQLITE_TRANSIENT);
+	if (sqlite3_step(stmtProvjeraRezervacije) == SQLITE_ROW) {
+		count = sqlite3_column_int(stmtProvjeraRezervacije, 0);
+	}
+	sqlite3_finalize(stmtProvjeraRezervacije);
+	if (count > 0) {
+		cout << "GRESKA PRI ZAKAZIVANJU REZERVACIJE-REZERVACIJA ZA TRAZENI VREMENSKI PERIOD VEC POSTOJI" << endl;
 		IzvrsiUpit("ROLLBACK;", "GRESKA PRI ROLLBACK-u");
 		return;
 	}
@@ -307,6 +345,22 @@ void Baza::PrikaziSveGoste() {
 	}
 	sqlite3_finalize(stmt);
 }
+int Baza::BrojGostiju() {
+	sqlite3_stmt* stmt;
+	string sql =
+		"SELECT COUNT (*) FROM Gosti;";
+	int rc = sqlite3_prepare_v2(db, sql.c_str(), -1, &stmt, nullptr);
+	if (rc != SQLITE_OK) {
+		cout << "GRESKA PRI PRIPREMI BROJANJA GOSTIJU:" << sqlite3_errmsg(db) << endl;
+		return -1;
+	}
+	int count = 0;
+	if (sqlite3_step(stmt) == SQLITE_ROW) {
+		count = sqlite3_column_int(stmt,0);
+	}
+	sqlite3_finalize(stmt);
+	return count;
+}
 void Baza::PrikaziSveRezervacije() {
 	sqlite3_stmt* stmt;
 	string sql =
@@ -336,6 +390,22 @@ void Baza::PrikaziSveRezervacije() {
 		cout << "---" << endl;
 	}
 	sqlite3_finalize(stmt);
+}
+int Baza::BrojRezervacija() {
+	sqlite3_stmt* stmt;
+	string sql =
+		"SELECT COUNT (*) FROM Rezervacije;";
+	int rc = sqlite3_prepare_v2(db, sql.c_str(), -1, &stmt, nullptr);
+	if (rc != SQLITE_OK) {
+		cout << "GRESKA PRI PRIPREMI BROJANJA REZERVACIJA:" << sqlite3_errmsg(db) << endl;
+		return -1;
+	}
+	int count = 0;
+	if (sqlite3_step(stmt) == SQLITE_ROW) {
+		count = sqlite3_column_int(stmt, 0);
+	}
+	sqlite3_finalize(stmt);
+	return count;
 }
 void Baza::ZakaziRezervacijuPostojecemGostu(string JMBG, int BrojSobe, string Pocetak, string Kraj) {
 	sqlite3_stmt* stmtProvjeraSobe;
@@ -608,4 +678,20 @@ void Baza::PrikaziSveRacunePremaStatusu(string Status) {
 		cout << "---" << endl;
 	}
 	sqlite3_finalize(stmt);
+}
+int Baza::BrojRacuna() {
+	sqlite3_stmt* stmt;
+	string sql =
+		"SELECT COUNT (*) FROM Racuni;";
+	int rc = sqlite3_prepare_v2(db, sql.c_str(), -1, &stmt, nullptr);
+	if (rc != SQLITE_OK) {
+		cout << "GRESKA PRI PRIPREMI BROJANJA RACUNA:" << sqlite3_errmsg(db) << endl;
+		return -1;
+	}
+	int count = 0;
+	if (sqlite3_step(stmt) == SQLITE_ROW) {
+		count = sqlite3_column_int(stmt, 0);
+	}
+	sqlite3_finalize(stmt);
+	return count;
 }
