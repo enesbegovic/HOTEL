@@ -119,6 +119,25 @@ void Baza::AzurirajStatusSobe(int BrojSobe, string StatusSobe) {
 	}
 	cout << "STATUS SOBE USPJESNO AZURIRAN" << endl;
 }
+string Baza::StatusSobe(int BrojSobe) {
+	sqlite3_stmt* stmt;
+	string sql =
+		"SELECT StatusSobe "
+		"FROM Sobe "
+		"WHERE BrojSobe=?;";
+	int rc = sqlite3_prepare_v2(db, sql.c_str(), -1, &stmt, nullptr);
+	if (rc != SQLITE_OK) {
+		cout << "GRESKA PRI PRIPREMI UZIMANJA STATUSA SOBE:" << sqlite3_errmsg(db) << endl;
+		return "";
+	}
+	sqlite3_bind_int(stmt, 1, BrojSobe);
+	string status = "";
+	if (sqlite3_step(stmt) == SQLITE_ROW) {
+		status =(const char*)sqlite3_column_text(stmt, 0);
+	}
+	sqlite3_finalize(stmt);
+	return status;
+}
 void Baza::PrikaziSveSobe() {
 	sqlite3_stmt* stmt;
 	string sql =
@@ -186,7 +205,7 @@ void Baza::PrikaziSveSobePremaStatusu(string Status) {
 	}
 	sqlite3_finalize(stmt);
 }
-void Baza::DodajGostaIZakaziRezervaciju(string ImePrezime, string JMBG, string email, int BrojSobe, string Pocetak, string Kraj) {
+int Baza::DodajGostaIZakaziRezervaciju(string ImePrezime, string JMBG, string email, int BrojSobe, string Pocetak, string Kraj) {
 	IzvrsiUpit("BEGIN TRANSACTION;", "GRESKA PRI POKRETANJU TRANSAKCIJE");
 	sqlite3_stmt* stmtGost;
 	string sqlGost =
@@ -195,7 +214,7 @@ void Baza::DodajGostaIZakaziRezervaciju(string ImePrezime, string JMBG, string e
 	if (rc != SQLITE_OK) {
 		cout << "GRESKA PRI PRIPREMI DODAVANJA GOSTA:" << sqlite3_errmsg(db) << endl;
 		IzvrsiUpit("ROLLBACK;", "GRESKA PRI ROLLBAC-u");
-		return;
+		return 0;
 	}
 	sqlite3_bind_text(stmtGost, 1, ImePrezime.c_str(), -1, SQLITE_TRANSIENT);
 	sqlite3_bind_text(stmtGost, 2, JMBG.c_str(), -1, SQLITE_TRANSIENT);
@@ -204,7 +223,7 @@ void Baza::DodajGostaIZakaziRezervaciju(string ImePrezime, string JMBG, string e
 	if (rc != SQLITE_DONE) {
 		cout << "GRESKA PRI DODAVANJU GOSTA:" << sqlite3_errmsg(db) << endl;
 		IzvrsiUpit("ROLLBACK;", "GRESKA PRI ROLLBACK-u");
-		return;
+		return 0;
 	}
 	int GostID = (int)sqlite3_last_insert_rowid(db);
 	sqlite3_stmt* stmtProvjeraSobe;
@@ -215,7 +234,7 @@ void Baza::DodajGostaIZakaziRezervaciju(string ImePrezime, string JMBG, string e
 	if (rc1 != SQLITE_OK) {
 		cout << "GRESKA PRI PRIPREMI PROVJERE SOBE:" << sqlite3_errmsg(db) << endl;
 		IzvrsiUpit("ROLLBACK;", "GRESKA PRI ROLLBACK-u");
-		return;
+		return 0;
 	}
 	sqlite3_bind_int(stmtProvjeraSobe, 1, BrojSobe);
 	if (sqlite3_step(stmtProvjeraSobe) == SQLITE_ROW) {
@@ -225,7 +244,7 @@ void Baza::DodajGostaIZakaziRezervaciju(string ImePrezime, string JMBG, string e
 	if (SobaID == 0) {
 		cout << "GRESKA PRI DODAVANJU REZERVACIJE-NE POSTOJI TRAZENA SOBA" << endl;
 		IzvrsiUpit("ROLLBACK;", "GRESKA PRI ROLLBACK-u");
-		return;
+		return 0;
 	}
 	sqlite3_stmt* stmtProvjeraRezervacije;
 	int count = 0;
@@ -235,7 +254,7 @@ void Baza::DodajGostaIZakaziRezervaciju(string ImePrezime, string JMBG, string e
 	if (rc3 != SQLITE_OK) {
 		cout << "GRESKA PRI PRIPREMI PROVJERE REZERVACIJE:" << sqlite3_errmsg(db) << endl;
 		IzvrsiUpit("ROLLBACK;", "GRESKA PRI ROLLBACK-u");
-		return;
+		return 0;
 	}
 	sqlite3_bind_int(stmtProvjeraRezervacije, 1, SobaID);
 	sqlite3_bind_text(stmtProvjeraRezervacije, 2, Pocetak.c_str(), -1, SQLITE_TRANSIENT);
@@ -247,7 +266,7 @@ void Baza::DodajGostaIZakaziRezervaciju(string ImePrezime, string JMBG, string e
 	if (count > 0) {
 		cout << "GRESKA PRI ZAKAZIVANJU REZERVACIJE-REZERVACIJA ZA TRAZENI VREMENSKI PERIOD VEC POSTOJI" << endl;
 		IzvrsiUpit("ROLLBACK;", "GRESKA PRI ROLLBACK-u");
-		return;
+		return 0;
 	}
 	sqlite3_stmt* stmtRezervacija;
 	string sqlRezervacija =
@@ -256,7 +275,7 @@ void Baza::DodajGostaIZakaziRezervaciju(string ImePrezime, string JMBG, string e
 	if (rc2 != SQLITE_OK) {
 		cout << "GRESKA PRI PRIPREMI DODAVANJA REZERVACIJE" << sqlite3_errmsg(db) << endl;
 		IzvrsiUpit("ROLLBACK;", "GRESKA PRI ROLLBACK-u");
-		return;
+		return 0;
 	}
 	sqlite3_bind_int(stmtRezervacija, 1, GostID);
 	sqlite3_bind_int(stmtRezervacija, 2, SobaID);
@@ -267,10 +286,12 @@ void Baza::DodajGostaIZakaziRezervaciju(string ImePrezime, string JMBG, string e
 	if (rc2 != SQLITE_DONE) {
 		cout << "GRESKA PRI DODAVANJU REZERVACIJE:" << sqlite3_errmsg(db) << endl;
 		IzvrsiUpit("ROLLBACK;", "GRESKA PRI ROLLBACK-u");
-		return;
+		return 0;
 	}
 	IzvrsiUpit("COMMIT;", "GRESKA PRI COMMIT-u");
+	int RezervacijaID = sqlite3_last_insert_rowid(db);
 	cout << "TRANSAKCIJA USPJESNA-DODANI GOST I REZERVACIJA" << endl;
+	return RezervacijaID;
 }
 void Baza::AzurirajStatusRezervacijeIStatusSobe(int RezervacijaID, int BrojSobe, string NoviStatus) {
 	IzvrsiUpit("BEGIN TRANSACTION;", "GRESKA PRI POKRETANJU TRANSAKCIJE");
@@ -321,6 +342,27 @@ void Baza::AzurirajStatusRezervacijeIStatusSobe(int RezervacijaID, int BrojSobe,
 	}
 	IzvrsiUpit("COMMIT;", "GRESKA PRI COMMIT-u");
 	cout << "TRANSAKCIJA USPJESNA-AZURIRANI STATUS REZERVACIJE I STATUS SOBE" << endl;
+}
+string Baza::StatusRezervacijeStatusSobe(int RezervacijaID, int BrojSobe) {
+	sqlite3_stmt* stmt;
+	string sql =
+		"SELECT Rezervacije.StatusRezervacije "
+		"FROM Rezervacije "
+		"JOIN Sobe ON Rezervacije.SobaID=Sobe.ID "
+		"WHERE Rezervacije.ID=? AND Sobe.BrojSobe=?;";
+	int rc = sqlite3_prepare_v2(db, sql.c_str(), -1, &stmt, nullptr);
+	if (rc != SQLITE_OK) {
+		cout << "GRESKA PRI PRIPREMI UZIMANJA STATUSA REZERVACIJE/STATUSA SOBE:" << sqlite3_errmsg(db) << endl;
+		return "";
+	}
+	sqlite3_bind_int(stmt, 1, RezervacijaID);
+	sqlite3_bind_int(stmt, 2, BrojSobe);
+	string StatusRezervacije = "";
+	if (sqlite3_step(stmt) == SQLITE_ROW) {
+		StatusRezervacije = (const char*)sqlite3_column_text(stmt, 0);
+	}
+	sqlite3_finalize(stmt);
+	return StatusRezervacije;
 }
 void Baza::PrikaziSveGoste() {
 	sqlite3_stmt* stmt;
@@ -578,7 +620,7 @@ void Baza::KreirajRacun(int RezervacijID, string Datum, string NacinPlacanja) {
 void Baza::AzurirajStatusRacuna(int RezervacijaID,string NoviStatus) {
 	sqlite3_stmt* stmt;
 	string sql =
-		"UPDATE Racuni SET StatusRacuna=?;";
+		"UPDATE Racuni SET StatusRacuna=? WHERE RezervacijaID=?;";
 	int rc = sqlite3_prepare_v2(db, sql.c_str(), -1, &stmt, nullptr);
 	if (rc != SQLITE_OK) {
 		cout << "GRESKA PRI PRIPREMI AZURIRANJA RACUNA:" << sqlite3_errmsg(db) << endl;
@@ -594,10 +636,30 @@ void Baza::AzurirajStatusRacuna(int RezervacijaID,string NoviStatus) {
 	}
 	cout << "USPJESNO AZURIRAN STATUS RACUNA" << endl;
 }
+string Baza::StatusRacuna(int RezervacijaID) {
+	sqlite3_stmt* stmt;
+	string sql =
+		"SELECT Racuni.StatusRacuna "
+		"FROM Racuni "
+		"JOIN Rezervacije ON Racuni.RezervacijaID=Rezervacije.ID "
+		"WHERE Rezervacije.ID=?;";
+	int rc = sqlite3_prepare_v2(db, sql.c_str(), -1, &stmt, nullptr);
+	if (rc != SQLITE_OK) {
+		cout << "GRESKA PRI PRIPREMI UZIMANJA STATUSA RACUNA:" << sqlite3_errmsg(db) << endl;
+		return "";
+	}
+	sqlite3_bind_int(stmt, 1, RezervacijaID);
+	string StatusRacuna = "";
+	if (sqlite3_step(stmt) == SQLITE_ROW) {
+		StatusRacuna = (const char*)sqlite3_column_text(stmt, 0);
+	}
+	sqlite3_finalize(stmt);
+	return StatusRacuna;
+}
 void Baza::AzurirajNacinPlacanja(int RezervacijaID, string NoviNacin) {
 	sqlite3_stmt* stmt;
 	string sql =
-		"UPDATE Racuni SET NacinPlacanja=?;";
+		"UPDATE Racuni SET NacinPlacanja=? WHERE RezervacijaID=?;";
 	int rc = sqlite3_prepare_v2(db, sql.c_str(), -1, &stmt, nullptr);
 	if (rc != SQLITE_OK) {
 		cout << "GRESKA PRI PRIPREMI AZURIRANJA NACINA PLACANJA:" << sqlite3_errmsg(db) << endl;
@@ -612,6 +674,26 @@ void Baza::AzurirajNacinPlacanja(int RezervacijaID, string NoviNacin) {
 		return;
 	}
 	cout << "USPJESNO AZURIRAN NACIN PLACANJA" << endl;
+}
+string Baza::NacinPlacanja(int RezervacijaID) {
+	sqlite3_stmt* stmt;
+	string sql =
+		"SELECT Racuni.NacinPlacanja "
+		"FROM Racuni "
+		"JOIN Rezervacije ON Racuni.RezervacijaID=Rezervacije.ID "
+		"WHERE Rezervacije.ID=?;";
+	int rc = sqlite3_prepare_v2(db, sql.c_str(), -1, &stmt, nullptr);
+	if (rc != SQLITE_OK) {
+		cout << "GRESKA PRI PRIPREMI UZIMANJA NACINA PLACANJA:" << sqlite3_errmsg(db) << endl;
+		return "";
+	}
+	sqlite3_bind_int(stmt, 1, RezervacijaID);
+	string NacinPlacanja = "";
+	if (sqlite3_step(stmt) == SQLITE_ROW) {
+		NacinPlacanja = (const char*)sqlite3_column_text(stmt, 0);
+	}
+	sqlite3_finalize(stmt);
+	return NacinPlacanja;
 }
 void Baza::PrikaziSveRacune() {
 	sqlite3_stmt* stmt;
