@@ -2,7 +2,7 @@
 #include<iostream>
 #include<string>
 #include"sqlite3.h"
-#include "StmtGuard.h"
+#include "StmtPtr.h"
 using namespace std;
 class Baza {
 	sqlite3* db;
