@@ -1,5 +1,7 @@
 # HOTEL - Sistem za upravljanje hotelom
 
+![Build and Test](https://github.com/enesbegovic/HOTEL/actions/workflows/build.yml/badge.svg)
+
 Konzolna C++ aplikacija za upravljanje hotelskim poslovanjem, povezana sa SQLite bazom podataka.
 
 ## Opis
@@ -47,3 +49,13 @@ Sve tabele koriste FOREIGN KEY i CHECK constraint za integritet podataka.
 ## Pokretanje
 
 Otvoriti `HOTEL.sln` u Visual Studiu, buildati (x64/Debug), pokrenuti preko Local Windows Debugger.
+
+## Testiranje
+
+Projekat sadrži 16 jediničnih testova (Google Test) koji pokrivaju rad sa Sobama, Gostima, Rezervacijama i Računima, uključujući ažuriranje statusa rezervacije, sobe, računa i načina plaćanja.
+
+Testovi se nalaze u `HOTEL_Testovi` projektu i mogu se pokrenuti kroz Visual Studio Test Explorer (Test → Run All Tests).
+
+## CI/CD
+
+Svaki push na `master` granu automatski pokreće build i sve testove preko GitHub Actions (vidi `.github/workflows/build.yml`).
