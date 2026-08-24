@@ -806,3 +806,25 @@ int Baza::BrojRacuna() {
 	
 	return count;
 }
+vector<Soba>Baza::UzmiSveSobe() {
+	vector<Soba>rezultat;
+	sqlite3_stmt* rawStmt;
+	string sql =
+		"SELECT * FROM Sobe;";
+	int rc = sqlite3_prepare_v2(db, sql.c_str(), -1, &rawStmt, nullptr);
+	if (rc != SQLITE_OK) {
+		cout << "GRESKA PRI PRIPREMI UZIMANJA SOBA:" << sqlite3_errmsg(db) << endl;
+		return rezultat;
+	}
+	StmtPtr stmt(rawStmt);
+	while (sqlite3_step(stmt.get()) == SQLITE_ROW) {
+		Soba s;
+		s.ID = sqlite3_column_int(stmt.get(), 0);
+		s.BrojSobe = sqlite3_column_int(stmt.get(), 1);
+		s.Kapacitet = sqlite3_column_int(stmt.get(), 2);
+		s.CijenaPoDanu = sqlite3_column_int(stmt.get(), 3);
+		s.Status = (const char*)sqlite3_column_text(stmt.get(), 4);
+		rezultat.push_back(s);
+	}
+	return rezultat;
+}

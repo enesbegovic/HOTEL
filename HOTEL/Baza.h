@@ -3,7 +3,15 @@
 #include<string>
 #include"sqlite3.h"
 #include "StmtPtr.h"
+#include <vector>
 using namespace std;
+struct Soba {
+	int ID;
+	int BrojSobe;
+	int Kapacitet;
+	int CijenaPoDanu;
+	string Status;
+};
 class Baza {
 	sqlite3* db;
 public:
@@ -16,6 +24,7 @@ public:
 	void AzurirajStatusSobe(int BrojSobe, string NoviStatus);
 	string StatusSobe(int BrojSobe);
 	void PrikaziSveSobe();
+	vector<Soba>UzmiSveSobe();
 	int BrojSoba();
 	void PrikaziSveSobePremaStatusu(string Status);
 	int DodajGostaIZakaziRezervaciju(string ImePrezime, string JMBG, string email, int BrojSobe, string Pocetak, string Kraj);
