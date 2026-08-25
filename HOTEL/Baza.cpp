@@ -464,7 +464,7 @@ int Baza::BrojRezervacija() {
 	}
 	return count;
 }
-void Baza::ZakaziRezervacijuPostojecemGostu(string JMBG, int BrojSobe, string Pocetak, string Kraj) {
+int Baza::ZakaziRezervacijuPostojecemGostu(string JMBG, int BrojSobe, string Pocetak, string Kraj) {
 	sqlite3_stmt* rawStmtProvjeraSobe;
 	int SobaID = 0;
 	string sqlProvjeraSobe =
@@ -472,7 +472,7 @@ void Baza::ZakaziRezervacijuPostojecemGostu(string JMBG, int BrojSobe, string Po
 	int rc = sqlite3_prepare_v2(db, sqlProvjeraSobe.c_str(), -1, &rawStmtProvjeraSobe, nullptr);
 	if (rc != SQLITE_OK) {
 		cout << "GRESKA PRI PRIPREMI PROVJERE SOBE:" << sqlite3_errmsg(db) << endl;
-		return;
+		return -1;
 	}
 	StmtPtr stmtProvjeraSobe(rawStmtProvjeraSobe);
 	sqlite3_bind_int(stmtProvjeraSobe.get(), 1, BrojSobe);
@@ -481,7 +481,7 @@ void Baza::ZakaziRezervacijuPostojecemGostu(string JMBG, int BrojSobe, string Po
 	}
 	if (SobaID == 0) {
 		cout << "GRESKA PRI ZAKAZIVANJU REZERVACIJE-NE POSTOJI TRAZENA SOBA" << endl;
-		return;
+		return -1;
 	}
 	sqlite3_stmt* rawStmtProvjeraRezervacije;
 	int count = 0;
@@ -490,7 +490,7 @@ void Baza::ZakaziRezervacijuPostojecemGostu(string JMBG, int BrojSobe, string Po
 	int rc1 = sqlite3_prepare_v2(db, sqlProvjeraRezervacije.c_str(), -1, &rawStmtProvjeraRezervacije, nullptr);
 	if (rc1 != SQLITE_OK) {
 		cout << "GRESKA PRI PRIPREMI PROVJERE REZERVACIJE:" << sqlite3_errmsg(db) << endl;
-		return;
+		return -1;
 	}
 	StmtPtr stmtProvjeraRezervacije(rawStmtProvjeraRezervacije);
 	sqlite3_bind_int(stmtProvjeraRezervacije.get(), 1, SobaID);
@@ -502,7 +502,7 @@ void Baza::ZakaziRezervacijuPostojecemGostu(string JMBG, int BrojSobe, string Po
 	
 	if (count > 0) {
 		cout << "GRESKA PRI ZAKAZIVANJU REZERVACIJE-REZERVACIJA VEC POSTOJI" << endl;
-		return;
+		return -1;
 	}
 	sqlite3_stmt* rawStmtProvjera;
 	int GostID = 0;
@@ -511,7 +511,7 @@ void Baza::ZakaziRezervacijuPostojecemGostu(string JMBG, int BrojSobe, string Po
 	int rc2 = sqlite3_prepare_v2(db, sqlProvjera.c_str(), -1, &rawStmtProvjera, nullptr);
 	if (rc2 != SQLITE_OK) {
 		cout << "GRESKA PRI PRIPREMI PROVJERE GOSTA:" << sqlite3_errmsg(db) << endl;
-		return;
+		return -1;
 	}
 	StmtPtr stmtProvjera(rawStmtProvjera);
 	sqlite3_bind_text(stmtProvjera.get(), 1, JMBG.c_str(), -1, SQLITE_TRANSIENT);
@@ -521,7 +521,7 @@ void Baza::ZakaziRezervacijuPostojecemGostu(string JMBG, int BrojSobe, string Po
 	
 	if (GostID == 0) {
 		cout << "GRESKA PRI ZAKAZIVANJU REZERVACIJE-NE POSTOJI TRAZENI GOST" << endl;
-		return;
+		return -1;
 	}
 	sqlite3_stmt* rawStmt;
 	string sql =
@@ -529,7 +529,7 @@ void Baza::ZakaziRezervacijuPostojecemGostu(string JMBG, int BrojSobe, string Po
 	int rc3 = sqlite3_prepare_v2(db, sql.c_str(), -1, &rawStmt, nullptr);
 	if (rc3 != SQLITE_OK) {
 		cout << "GRESKA PRI PRIPREMI ZAKAZIVANJA REZERVACIJE:" << sqlite3_errmsg(db) << endl;
-		return;
+		return -1;
 	}
 	StmtPtr stmt(rawStmt);
 	sqlite3_bind_int(stmt.get(), 1, GostID);
@@ -540,9 +540,11 @@ void Baza::ZakaziRezervacijuPostojecemGostu(string JMBG, int BrojSobe, string Po
 
 	if (rc3 != SQLITE_DONE) {
 		cout << "GRESKA PRI ZAKAZIVANJU REZERVACIJE:" << sqlite3_errmsg(db) << endl;
-		return;
+		return -1;
 	}
+	int RezervacijaID = (int)sqlite3_last_insert_rowid(db);
 	cout << "USPJESNO ZAKAZANA REZERVACIJA POSTOJECEM GOSTU" << endl;
+	return RezervacijaID;
 }
 void Baza::PrikaziSveRezervacijePremaStatusu(string Status) {
 	sqlite3_stmt* rawStmt;
@@ -825,6 +827,262 @@ vector<Soba>Baza::UzmiSveSobe() {
 		s.CijenaPoDanu = sqlite3_column_int(stmt.get(), 3);
 		s.Status = (const char*)sqlite3_column_text(stmt.get(), 4);
 		rezultat.push_back(s);
+	}
+	return rezultat;
+}
+vector<Soba>Baza::UzmiSveSlobodneSobe(string status) {
+	vector<Soba>rezultat;
+	sqlite3_stmt* rawStmt;
+	string sql =
+		"SELECT * FROM Sobe WHERE StatusSobe=?;";
+	int rc = sqlite3_prepare_v2(db, sql.c_str(), -1, &rawStmt, nullptr);
+	if (rc != SQLITE_OK) {
+		cout << "GRESKA PRI PRIPREMI UZIMANJA SOBA:" << sqlite3_errmsg(db) << endl;
+		return rezultat;
+	}
+	StmtPtr stmt(rawStmt);
+	sqlite3_bind_text(stmt.get(), 1, status.c_str(), -1, SQLITE_TRANSIENT);
+	while (sqlite3_step(stmt.get()) == SQLITE_ROW) {
+		Soba s;
+		s.ID = sqlite3_column_int(stmt.get(), 0);
+		s.BrojSobe = sqlite3_column_int(stmt.get(), 1);
+		s.Kapacitet = sqlite3_column_int(stmt.get(), 2);
+		s.CijenaPoDanu = sqlite3_column_int(stmt.get(), 3);
+		s.Status = (const char*)sqlite3_column_text(stmt.get(), 4);
+		rezultat.push_back(s);
+	}
+	return rezultat;
+}
+vector<Soba>Baza::UzmiSveZauzeteSobe(string status) {
+	vector<Soba>rezultat;
+	sqlite3_stmt* rawStmt;
+	string sql =
+		"SELECT * FROM Sobe WHERE StatusSobe=?;";
+	int rc = sqlite3_prepare_v2(db, sql.c_str(), -1, &rawStmt, nullptr);
+	if (rc != SQLITE_OK) {
+		cout << "GRESKA PRI PRIPREMI UZIMANJA SOBA:" << sqlite3_errmsg(db) << endl;
+		return rezultat;
+	}
+	StmtPtr stmt(rawStmt);
+	sqlite3_bind_text(stmt.get(), 1, status.c_str(), -1, SQLITE_TRANSIENT);
+	while (sqlite3_step(stmt.get()) == SQLITE_ROW) {
+		Soba s;
+		s.ID = sqlite3_column_int(stmt.get(), 0);
+		s.BrojSobe = sqlite3_column_int(stmt.get(), 1);
+		s.Kapacitet = sqlite3_column_int(stmt.get(), 2);
+		s.CijenaPoDanu = sqlite3_column_int(stmt.get(), 3);
+		s.Status = (const char*)sqlite3_column_text(stmt.get(), 4);
+		rezultat.push_back(s);
+	}
+	return rezultat;
+}
+vector<Soba>Baza::UzmiSveSobeNaOdrzavanju(string status) {
+	vector<Soba>rezultat;
+	sqlite3_stmt* rawStmt;
+	string sql =
+		"SELECT * FROM Sobe WHERE StatusSobe=?;";
+	int rc = sqlite3_prepare_v2(db, sql.c_str(), -1, &rawStmt, nullptr);
+	if (rc != SQLITE_OK) {
+		cout << "GRESKA PRI PRIPREMI UZIMANJA SOBA:" << sqlite3_errmsg(db) << endl;
+		return rezultat;
+	}
+	StmtPtr stmt(rawStmt);
+	sqlite3_bind_text(stmt.get(), 1, status.c_str(), -1, SQLITE_TRANSIENT);
+	while (sqlite3_step(stmt.get()) == SQLITE_ROW) {
+		Soba s;
+		s.ID = sqlite3_column_int(stmt.get(), 0);
+		s.BrojSobe = sqlite3_column_int(stmt.get(), 1);
+		s.Kapacitet = sqlite3_column_int(stmt.get(), 2);
+		s.CijenaPoDanu = sqlite3_column_int(stmt.get(), 3);
+		s.Status = (const char*)sqlite3_column_text(stmt.get(), 4);
+		rezultat.push_back(s);
+	}
+	return rezultat;
+}
+vector<Gost>Baza::UzmiSveGoste() {
+	vector<Gost>rezultat;
+	sqlite3_stmt* rawStmt;
+	string sql =
+		"SELECT * FROM Gosti;";
+	int rc = sqlite3_prepare_v2(db, sql.c_str(), -1, &rawStmt, nullptr);
+	if (rc != SQLITE_OK) {
+		cout << "GRESKA PRI PRIPREMI UZIMANJA GOSTIJU:" << sqlite3_errmsg(db) << endl;
+		return rezultat;
+	}
+	StmtPtr stmt(rawStmt);
+	while (sqlite3_step(stmt.get()) == SQLITE_ROW) {
+		Gost g;
+		g.ID = sqlite3_column_int(stmt.get(), 0);
+		g.ImePrezime = (const char*)sqlite3_column_text(stmt.get(), 1);
+		g.JMBG = (const char*)sqlite3_column_text(stmt.get(), 2);
+		g.email = (const char*)sqlite3_column_text(stmt.get(), 3);
+		rezultat.push_back(g);
+	}
+	return rezultat;
+}
+vector<Rezervacija>Baza::UzmiSveRezervacije() {
+	vector<Rezervacija>rezultat;
+	sqlite3_stmt* rawStmt;
+	string sql =
+		"SELECT Rezervacije.ID, Gosti.ImePrezime, Sobe.BrojSobe, Rezervacije.Pocetak, Rezervacije.Kraj, Rezervacije.StatusRezervacije "
+		"FROM Rezervacije "
+		"JOIN Gosti ON Rezervacije.GostID=Gosti.ID "
+		"JOIN Sobe ON Rezervacije.SobaID=Sobe.ID;";
+	int rc = sqlite3_prepare_v2(db, sql.c_str(), -1, &rawStmt, nullptr);
+	if (rc != SQLITE_OK) {
+		cout << "GRESKA PRI PRIPREMI UZIMANJA REZERVACIJA:" << sqlite3_errmsg(db) << endl;
+		return rezultat;
+	}
+	StmtPtr stmt(rawStmt);
+	while (sqlite3_step(stmt.get()) == SQLITE_ROW) {
+		Rezervacija r;
+		r.ID = sqlite3_column_int(stmt.get(), 0);
+		r.Gost = (const char*)sqlite3_column_text(stmt.get(), 1);
+		r.BrojSobe = sqlite3_column_int(stmt.get(), 2);
+		r.datumPocetka = (const char*)sqlite3_column_text(stmt.get(), 3);
+		r.datumKraja = (const char*)sqlite3_column_text(stmt.get(), 4);
+		r.status = (const char*)sqlite3_column_text(stmt.get(), 5);
+		rezultat.push_back(r);
+	}
+	return rezultat;
+}
+vector<Rezervacija>Baza::UzmiSveRezervacijeNaCekanju(string status) {
+	vector<Rezervacija>rezultat;
+	sqlite3_stmt* rawStmt;
+	string sql =
+		"SELECT Rezervacije.ID, Gosti.ImePrezime, Sobe.BrojSobe, Rezervacije.Pocetak, Rezervacije.Kraj, Rezervacije.StatusRezervacije "
+		"FROM Rezervacije "
+		"JOIN Gosti ON Rezervacije.GostID=Gosti.ID "
+		"JOIN Sobe ON Rezervacije.SobaID=Sobe.ID "
+		"WHERE StatusRezervacije=?;";
+	int rc = sqlite3_prepare_v2(db, sql.c_str(), -1, &rawStmt, nullptr);
+	if (rc != SQLITE_OK) {
+		cout << "GRESKA PRI PRIPREMI UZIMANJA REZERVACIJA:" << sqlite3_errmsg(db) << endl;
+		return rezultat;
+	}
+	StmtPtr stmt(rawStmt);
+	sqlite3_bind_text(stmt.get(), 1, status.c_str(), -1, SQLITE_TRANSIENT);
+	while (sqlite3_step(stmt.get()) == SQLITE_ROW) {
+		Rezervacija r;
+		r.ID = sqlite3_column_int(stmt.get(), 0);
+		r.Gost = (const char*)sqlite3_column_text(stmt.get(), 1);
+		r.BrojSobe = sqlite3_column_int(stmt.get(), 2);
+		r.datumPocetka = (const char*)sqlite3_column_text(stmt.get(), 3);
+		r.datumKraja = (const char*)sqlite3_column_text(stmt.get(), 4);
+		r.status = (const char*)sqlite3_column_text(stmt.get(), 5);
+		rezultat.push_back(r);
+	}
+	return rezultat;
+}
+vector<Rezervacija>Baza::UzmiSveRezervacijeUToku(string status) {
+	vector<Rezervacija>rezultat;
+	sqlite3_stmt* rawStmt;
+	string sql =
+		"SELECT Rezervacije.ID, Gosti.ImePrezime, Sobe.BrojSobe, Rezervacije.Pocetak, Rezervacije.Kraj, Rezervacije.StatusRezervacije "
+		"FROM Rezervacije "
+		"JOIN Gosti ON Rezervacije.GostID=Gosti.ID "
+		"JOIN Sobe ON Rezervacije.SobaID=Sobe.ID "
+		"WHERE StatusRezervacije=?;";
+	int rc = sqlite3_prepare_v2(db, sql.c_str(), -1, &rawStmt, nullptr);
+	if (rc != SQLITE_OK) {
+		cout << "GRESKA PRI PRIPREMI UZIMANJA REZERVACIJA:" << sqlite3_errmsg(db) << endl;
+		return rezultat;
+	}
+	StmtPtr stmt(rawStmt);
+	sqlite3_bind_text(stmt.get(), 1, status.c_str(), -1, SQLITE_TRANSIENT);
+	while (sqlite3_step(stmt.get()) == SQLITE_ROW) {
+		Rezervacija r;
+		r.ID = sqlite3_column_int(stmt.get(), 0);
+		r.Gost = (const char*)sqlite3_column_text(stmt.get(), 1);
+		r.BrojSobe = sqlite3_column_int(stmt.get(), 2);
+		r.datumPocetka = (const char*)sqlite3_column_text(stmt.get(), 3);
+		r.datumKraja = (const char*)sqlite3_column_text(stmt.get(), 4);
+		r.status = (const char*)sqlite3_column_text(stmt.get(), 5);
+		rezultat.push_back(r);
+	}
+	return rezultat;
+}
+vector<Rezervacija>Baza::UzmiSveRezervacijeZavrsena(string status) {
+	vector<Rezervacija>rezultat;
+	sqlite3_stmt* rawStmt;
+	string sql =
+		"SELECT Rezervacije.ID, Gosti.ImePrezime, Sobe.BrojSobe, Rezervacije.Pocetak, Rezervacije.Kraj, Rezervacije.StatusRezervacije "
+		"FROM Rezervacije "
+		"JOIN Gosti ON Rezervacije.GostID=Gosti.ID "
+		"JOIN Sobe ON Rezervacije.SobaID=Sobe.ID "
+		"WHERE StatusRezervacije=?;";
+	int rc = sqlite3_prepare_v2(db, sql.c_str(), -1, &rawStmt, nullptr);
+	if (rc != SQLITE_OK) {
+		cout << "GRESKA PRI PRIPREMI UZIMANJA REZERVACIJA:" << sqlite3_errmsg(db) << endl;
+		return rezultat;
+	}
+	StmtPtr stmt(rawStmt);
+	sqlite3_bind_text(stmt.get(), 1, status.c_str(), -1, SQLITE_TRANSIENT);
+	while (sqlite3_step(stmt.get()) == SQLITE_ROW) {
+		Rezervacija r;
+		r.ID = sqlite3_column_int(stmt.get(), 0);
+		r.Gost = (const char*)sqlite3_column_text(stmt.get(), 1);
+		r.BrojSobe = sqlite3_column_int(stmt.get(), 2);
+		r.datumPocetka = (const char*)sqlite3_column_text(stmt.get(), 3);
+		r.datumKraja = (const char*)sqlite3_column_text(stmt.get(), 4);
+		r.status = (const char*)sqlite3_column_text(stmt.get(), 5);
+		rezultat.push_back(r);
+	}
+	return rezultat;
+}
+vector<Rezervacija>Baza::UzmiSveRezervacijeOtkazana(string status) {
+	vector<Rezervacija>rezultat;
+	sqlite3_stmt* rawStmt;
+	string sql =
+		"SELECT Rezervacije.ID, Gosti.ImePrezime, Sobe.BrojSobe, Rezervacije.Pocetak, Rezervacije.Kraj, Rezervacije.StatusRezervacije "
+		"FROM Rezervacije "
+		"JOIN Gosti ON Rezervacije.GostID=Gosti.ID "
+		"JOIN Sobe ON Rezervacije.SobaID=Sobe.ID "
+		"WHERE StatusRezervacije=?;";
+	int rc = sqlite3_prepare_v2(db, sql.c_str(), -1, &rawStmt, nullptr);
+	if (rc != SQLITE_OK) {
+		cout << "GRESKA PRI PRIPREMI UZIMANJA REZERVACIJA:" << sqlite3_errmsg(db) << endl;
+		return rezultat;
+	}
+	StmtPtr stmt(rawStmt);
+	sqlite3_bind_text(stmt.get(), 1, status.c_str(), -1, SQLITE_TRANSIENT);
+	while (sqlite3_step(stmt.get()) == SQLITE_ROW) {
+		Rezervacija r;
+		r.ID = sqlite3_column_int(stmt.get(), 0);
+		r.Gost = (const char*)sqlite3_column_text(stmt.get(), 1);
+		r.BrojSobe = sqlite3_column_int(stmt.get(), 2);
+		r.datumPocetka = (const char*)sqlite3_column_text(stmt.get(), 3);
+		r.datumKraja = (const char*)sqlite3_column_text(stmt.get(), 4);
+		r.status = (const char*)sqlite3_column_text(stmt.get(), 5);
+		rezultat.push_back(r);
+	}
+	return rezultat;
+}
+vector<Racun>Baza::UzmiSveRacune() {
+	vector<Racun>rezultat;
+	sqlite3_stmt* rawStmt;
+	string sql =
+		"SELECT Racuni.ID, Gosti.ImePrezime, Rezervacije.ID, Racuni.DatumIzdavanjaRacuna, Racuni.UkupanIznosRacuna, Racuni.NacinPlacanja, Racuni.StatusRacuna "
+		"FROM Racuni "
+		"JOIN Rezervacije ON Racuni.RezervacijaID=Rezervacije.ID "
+		"JOIN Gosti ON Rezervacije.GostID=Gosti.ID "
+		"JOIN Sobe ON Rezervacije.SobaID=Sobe.ID;";
+	int rc = sqlite3_prepare_v2(db, sql.c_str(), -1, &rawStmt, nullptr);
+	if (rc != SQLITE_OK) {
+		cout << "GRESKA PRI PRIPREMI UZIMANJA RACUNA:" << sqlite3_errmsg(db) << endl;
+		return rezultat;
+	}
+	StmtPtr stmt(rawStmt);
+	while (sqlite3_step(stmt.get()) == SQLITE_ROW) {
+		Racun r;
+		r.ID = sqlite3_column_int(stmt.get(), 0);
+		r.Gost = (const char*)sqlite3_column_text(stmt.get(), 1);
+		r.RezervacijaID = sqlite3_column_int(stmt.get(), 2);
+		r.DatumIzdavanjaRacuna = (const char*)sqlite3_column_text(stmt.get(), 3);
+		r.UkupanIznosRacuna = sqlite3_column_double(stmt.get(), 4);
+		r.NacinPlacanja = (const char*)sqlite3_column_text(stmt.get(), 5);
+		r.Status = (const char*)sqlite3_column_text(stmt.get(), 6);
+		rezultat.push_back(r);
 	}
 	return rezultat;
 }
