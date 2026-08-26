@@ -1086,3 +1086,63 @@ vector<Racun>Baza::UzmiSveRacune() {
 	}
 	return rezultat;
 }
+vector<Racun>Baza::UzmiSveNeplaceneRacune(string status) {
+	vector<Racun>rezultat;
+	sqlite3_stmt* rawStmt;
+	string sql =
+		"SELECT Racuni.ID, Gosti.ImePrezime, Rezervacije.ID, Racuni.DatumIzdavanjaRacuna, Racuni.UkupanIznosRacuna, Racuni.NacinPlacanja, Racuni.StatusRacuna "
+		"FROM Racuni "
+		"JOIN Rezervacije ON Racuni.RezervacijaID=Rezervacije.ID "
+		"JOIN Gosti ON Rezervacije.GostID=Gosti.ID "
+		"JOIN Sobe ON Rezervacije.SobaID=Sobe.ID "
+		"WHERE StatusRacuna=?;";
+	int rc = sqlite3_prepare_v2(db, sql.c_str(), -1, &rawStmt, nullptr);
+	if (rc != SQLITE_OK) {
+		cout << "GRESKA PRI PRIPREMI UZIMANJA RACUNA:" << sqlite3_errmsg(db) << endl;
+		return rezultat;
+	}
+	StmtPtr stmt(rawStmt);
+	sqlite3_bind_text(stmt.get(), 1, status.c_str(), -1, SQLITE_TRANSIENT);
+	while (sqlite3_step(stmt.get()) == SQLITE_ROW) {
+		Racun r;
+		r.ID = sqlite3_column_int(stmt.get(), 0);
+		r.Gost = (const char*)sqlite3_column_text(stmt.get(), 1);
+		r.RezervacijaID = sqlite3_column_int(stmt.get(), 2);
+		r.DatumIzdavanjaRacuna = (const char*)sqlite3_column_text(stmt.get(), 3);
+		r.UkupanIznosRacuna = sqlite3_column_double(stmt.get(), 4);
+		r.NacinPlacanja = (const char*)sqlite3_column_text(stmt.get(), 5);
+		r.Status = (const char*)sqlite3_column_text(stmt.get(), 6);
+		rezultat.push_back(r);
+	}
+	return rezultat;
+}
+vector<Racun>Baza::UzmiSvePlaceneRacune(string status) {
+	vector<Racun>rezultat;
+	sqlite3_stmt* rawStmt;
+	string sql =
+		"SELECT Racuni.ID, Gosti.ImePrezime, Rezervacije.ID, Racuni.DatumIzdavanjaRacuna, Racuni.UkupanIznosRacuna, Racuni.NacinPlacanja, Racuni.StatusRacuna "
+		"FROM Racuni "
+		"JOIN Rezervacije ON Racuni.RezervacijaID=Rezervacije.ID "
+		"JOIN Gosti ON Rezervacije.GostID=Gosti.ID "
+		"JOIN Sobe ON Rezervacije.SobaID=Sobe.ID "
+		"WHERE StatusRacuna=?;";
+	int rc = sqlite3_prepare_v2(db, sql.c_str(), -1, &rawStmt, nullptr);
+	if (rc != SQLITE_OK) {
+		cout << "GRESKA PRI PRIPREMI UZIMANJA RACUNA:" << sqlite3_errmsg(db) << endl;
+		return rezultat;
+	}
+	StmtPtr stmt(rawStmt);
+	sqlite3_bind_text(stmt.get(), 1, status.c_str(), -1, SQLITE_TRANSIENT);
+	while (sqlite3_step(stmt.get()) == SQLITE_ROW) {
+		Racun r;
+		r.ID = sqlite3_column_int(stmt.get(), 0);
+		r.Gost = (const char*)sqlite3_column_text(stmt.get(), 1);
+		r.RezervacijaID = sqlite3_column_int(stmt.get(), 2);
+		r.DatumIzdavanjaRacuna = (const char*)sqlite3_column_text(stmt.get(), 3);
+		r.UkupanIznosRacuna = sqlite3_column_double(stmt.get(), 4);
+		r.NacinPlacanja = (const char*)sqlite3_column_text(stmt.get(), 5);
+		r.Status = (const char*)sqlite3_column_text(stmt.get(), 6);
+		rezultat.push_back(r);
+	}
+	return rezultat;
+}

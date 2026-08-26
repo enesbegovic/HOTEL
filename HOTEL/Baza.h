@@ -75,6 +75,8 @@ public:
 	string NacinPlacanja(int RezervacijaID);
 	void PrikaziSveRacune();
 	vector<Racun>UzmiSveRacune();
+	vector<Racun>UzmiSveNeplaceneRacune(string status);
+	vector<Racun>UzmiSvePlaceneRacune(string status);
 	int BrojRacuna();
 	void PrikaziSveRacunePremaStatusu(string Status);
 };

@@ -270,6 +270,93 @@ int main() {
 		}
 		res.set_content(rezultat.dump(4), "application/json");
 		});
+	server.Post("/racuni", [&baza](const httplib::Request& req, httplib::Response& res) {
+		try {
+			json tijelo = json::parse(req.body);
+			int RezervacijaID = tijelo.at("rezervacijaid");
+			string Datum = tijelo.at("datum");
+			string NacinPlacanja = tijelo.at("placanje");
+			baza.KreirajRacun(RezervacijaID, Datum, NacinPlacanja);
+			json Poruka;
+			Poruka["Poruka"] = "Racun uspijesno kreiran";
+			res.status = 201;
+			res.set_content(Poruka.dump(4), "application/json");
+		}
+		catch (const std::exception& e) {
+			json Greska;
+			Greska["Greska"] = e.what();
+			res.status = 400;
+			res.set_content(Greska.dump(4), "application/json");
+		}
+		});
+	server.Get("/racuni/neplaceni", [&baza](const httplib::Request& req, httplib::Response& res) {
+		std::vector<Racun>racuni = baza.UzmiSveNeplaceneRacune("neplacen");
+		json rezultat = json::array();
+		for (const auto& r : racuni) {
+			json jr;
+			jr["ID"] = r.ID;
+			jr["Ime i Prezime Gosta"] = r.Gost;
+			jr["Rezervacija ID"] = r.RezervacijaID;
+			jr["Datum Izdavanja Racuna"] = r.DatumIzdavanjaRacuna;
+			jr["Ukupan Iznos Racuna"] = r.UkupanIznosRacuna;
+			jr["Nacin Placanja"] = r.NacinPlacanja;
+			jr["Status Racuna"] = r.Status;
+			rezultat.push_back(jr);
+		}
+		res.set_content(rezultat.dump(4), "application/json");
+		});
+	server.Get("/racuni/placeni", [&baza](const httplib::Request& req, httplib::Response& res) {
+		std::vector<Racun>racuni = baza.UzmiSvePlaceneRacune("placen");
+		json rezultat = json::array();
+		for (const auto& r : racuni) {
+			json jr;
+			jr["ID"] = r.ID;
+			jr["Ime i Prezime Gosta"] = r.Gost;
+			jr["Rezervacija ID"] = r.RezervacijaID;
+			jr["Datum Izdavanja Racuna"] = r.DatumIzdavanjaRacuna;
+			jr["Ukupan Iznos Racuna"] = r.UkupanIznosRacuna;
+			jr["Nacin Placanja"] = r.NacinPlacanja;
+			jr["Status Racuna"] = r.Status;
+			rezultat.push_back(jr);
+		}
+		res.set_content(rezultat.dump(4), "application/json");
+		});
+	server.Put("/racuni/:rezervacijaid/nacinplacanja", [&baza](const httplib::Request& req, httplib::Response& res) {
+		try {
+			int RezervacijaID = std::stoi(req.path_params.at("rezervacijaid"));
+			json tijelo = json::parse(req.body);
+			string NacinPlacanja = tijelo.at("nacinplacanja");
+			baza.AzurirajNacinPlacanja(RezervacijaID, NacinPlacanja);
+			json Poruka;
+			Poruka["Poruka"] = "Uspijesno azuriran nacin placanja";
+			res.status = 200;
+			res.set_content(Poruka.dump(4), "application/json");
+		}
+		catch (const std::exception& e) {
+			json Greska;
+			Greska["Greska"] = e.what();
+			res.status = 400;
+			res.set_content(Greska.dump(4), "application/json");
+		}
+		});
+	server.Put("/racuni/:rezervacijaid/statusracuna", [&baza](const httplib::Request& req, httplib::Response& res) {
+		try {
+			int RezervacijaID = std::stoi(req.path_params.at("rezervacijaid"));
+			json tijelo = json::parse(req.body);
+			string StatusRacuna = tijelo.at("statusracuna");
+			baza.AzurirajStatusRacuna(RezervacijaID, StatusRacuna);
+			json Poruka;
+			Poruka["Poruka"] = "Uspijesno azuriran status racuna";
+			res.status = 200;
+			res.set_content(Poruka.dump(4), "application/json");
+		}
+		catch (const std::exception& e) {
+			json Greska;
+			Greska["Greska"] = e.what();
+			res.status = 400;
+			res.set_content(Greska.dump(4), "application/json");
+		}
+		});
 	std::cout << "Server pokrenut na http://localhost:8080" << std::endl;
 	server.listen("localhost", 8080);
 	return 0;
