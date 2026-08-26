@@ -23,6 +23,13 @@ jobs:
       - name: NuGet restore (test projekat)
         run: nuget restore HOTEL_Testovi\HOTEL_Testovi.vcxproj -PackagesDirectory packages
 
+      - name: Instaliraj vcpkg i pakete
+        run: |
+          git clone https://github.com/microsoft/vcpkg.git C:\vcpkg
+          C:\vcpkg\bootstrap-vcpkg.bat
+          C:\vcpkg\vcpkg.exe install cpp-httplib:x64-windows nlohmann-json:x64-windows
+          C:\vcpkg\vcpkg.exe integrate install
+
       - name: Build solution
         run: msbuild HOTEL.slnx /p:Configuration=Release /p:Platform=x64
 
