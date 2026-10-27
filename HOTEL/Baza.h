@@ -79,4 +79,8 @@ public:
 	vector<Racun>UzmiSvePlaceneRacune(string status);
 	int BrojRacuna();
 	void PrikaziSveRacunePremaStatusu(string Status);
+	void DodajKorisnika(string UserName, string PassWordHash);
+	string UzmiHash(string UserName);
+	void PostaviUlogu(string UserName, string Uloga);
+	string UzmiUlogu(string UserName);
 };
