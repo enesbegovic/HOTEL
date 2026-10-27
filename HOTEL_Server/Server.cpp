@@ -3,7 +3,7 @@
 #include "Baza.h"
 using json = nlohmann::json;
 int main() {
-	Baza baza("C:\\Users\\enesb\\source\\repos\\HOTEL\\HOTEL\\Hotel.db");
+	Baza baza("Hotel.db");
 	baza.KreirajTabelu();
 	baza.KreirajIndex();
 	httplib::Server server;
@@ -358,6 +358,6 @@ int main() {
 		}
 		});
 	std::cout << "Server pokrenut na http://localhost:8080" << std::endl;
-	server.listen("localhost", 8080);
+	server.listen("0.0.0.0", 8080);
 	return 0;
 }

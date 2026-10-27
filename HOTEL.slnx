@@ -3,6 +3,9 @@
     <Platform Name="x64" />
     <Platform Name="x86" />
   </Configurations>
+  <Folder Name="/Solution Items/">
+    <File Path="Dockerfile" />
+  </Folder>
   <Project Path="HOTEL/HOTEL.vcxproj" Id="a571e904-1679-40a4-857c-707a22c88bbf" />
   <Project Path="HOTEL_Server/HOTEL_Server.vcxproj" Id="0389205d-9f08-485a-a00d-6079f1287edd" />
   <Project Path="HOTEL_Testovi/HOTEL_Testovi.vcxproj" Id="0593e599-b7fd-474c-91d9-4d9a9bd3c45d" />
