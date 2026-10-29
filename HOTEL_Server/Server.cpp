@@ -92,6 +92,14 @@ int main() {
 			string Uloga = baza.UzmiUlogu(UserName);
 			{
 				std::lock_guard<mutex>lock(sesijeMutex);
+				for (auto it = sesije.begin(); it != sesije.end();) {
+					if (it->second.Vrijeme < std::chrono::steady_clock::now()) {
+						it = sesije.erase(it);
+					}
+					else {
+						++it;
+					}
+				}
 				sesije[token] = { UserName,Uloga,std::chrono::steady_clock::now() + std::chrono::hours(1) };
 			}
 			json Poruka;
