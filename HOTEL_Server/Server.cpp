@@ -1,3 +1,4 @@
+#define CPPHTTPLIB_OPENSSL_SUPPORT
 #include <httplib.h>
 #include <nlohmann/json.hpp>
 #include <mutex>
@@ -21,7 +22,11 @@ int main() {
 	std::mutex sesijeMutex;
 	baza.KreirajTabelu();
 	baza.KreirajIndex();
-	httplib::Server server;
+	httplib::SSLServer server("cert.pem","key.pem");
+	if (!server.is_valid()) {
+		std::cout << "Greska:Certifikat ili kljuc nije ucitan" << std::endl;
+		return 1;
+	}
 	server.set_pre_routing_handler([&sesije, &sesijeMutex](const httplib::Request& req, httplib::Response& res) {
 		if (req.path == "/" || req.path == "/register" || req.path == "/login") {
 			return httplib::Server::HandlerResponse::Unhandled;
@@ -472,7 +477,7 @@ int main() {
 			res.set_content(Greska.dump(4), "application/json");
 		}
 		});
-	std::cout << "Server pokrenut na http://localhost:8080" << std::endl;
+	std::cout << "Server pokrenut na https://localhost:8080" << std::endl;
 	server.listen("0.0.0.0", 8080);
 	return 0;
 }
