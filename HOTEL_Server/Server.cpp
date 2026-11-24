@@ -46,7 +46,8 @@ int main() {
 			if (it != sesije.end() && it->second.Vrijeme > std::chrono::steady_clock::now()) {
 				bool Mijenja = (req.method == "POST" || req.method == "PUT" || req.method == "DELETE")
 					&& req.path != "/logout";
-				if (Mijenja && it->second.Uloga != "admin") {
+				bool Citanje = (req.path.rfind("/gosti", 0) == 0 || req.path.rfind("/rezervacije", 0) == 0 || req.path.rfind("/racuni", 0) == 0);
+				if ((Mijenja||Citanje) && it->second.Uloga != "admin") {
 					res.status = 403;
 					res.set_content("{\"Greska\":\"Nemate dozvolu za ovu akciju\"}", "application/json");
 					return httplib::Server::HandlerResponse::Handled;
@@ -332,7 +333,6 @@ int main() {
 			json jg;
 			jg["ID"] = g.ID;
 			jg["Ime i Prezime"] = g.ImePrezime;
-			jg["JMBG"] = g.JMBG;
 			jg["E-mail Adresa"] = g.email;
 			rezultat.push_back(jg);
 		}
