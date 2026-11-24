@@ -7,24 +7,25 @@
 #include <sodium.h>
 #include "Baza.h"
 using json = nlohmann::json;
+struct Sesije {
+	string UserName;
+	string Uloga;
+	std::chrono::steady_clock::time_point Vrijeme;
+};
+struct Pokusaji {
+	int brojPokusaja = 0;
+	std::chrono::steady_clock::time_point BlokadaDo{};
+};
 int main() {
 	if (sodium_init() < 0) {
 		std::cout << "Libsodium nije inicijaliziran" << std::endl;
 		return 1;
 	}
 	Baza baza("Hotel.db");
-	struct Sesije {
-		string UserName;
-		string Uloga;
-		std::chrono::steady_clock::time_point Vrijeme;
-	};
-	struct Pokusaji {
-		int brojPokusaja = 0;
-		std::chrono::steady_clock::time_point BlokadaDo{};
-	};
 	std::map<string, Sesije>sesije;
 	std::map<string, Pokusaji>pokusaji;
 	std::mutex sesijeMutex;
+	std::mutex ulogaMutex;
 	baza.KreirajTabelu();
 	baza.KreirajIndex();
 	httplib::SSLServer server("cert.pem","key.pem");
@@ -56,6 +57,78 @@ int main() {
 		res.status = 401;
 		res.set_content("{\"Greska\":\"Nevazeci ili istekao token\"}", "application/json");
 		return httplib::Server::HandlerResponse::Handled;
+		});
+	server.Put("/korisnici/:username/uloga", [&baza, &sesije, &sesijeMutex, &ulogaMutex](const httplib::Request& req, httplib::Response& res){
+		json tijelo = json::parse(req.body, nullptr, false);
+		if (tijelo.is_discarded() || !tijelo.is_object() || !tijelo.contains("uloga") || !tijelo["uloga"].is_string()) {
+			res.status = 400;
+			res.set_content("{\"Greska\":\"Nevalidno tijelo\"}", "application/json");
+			return;
+		}
+		string NovaUloga = tijelo["uloga"];
+		if (NovaUloga != "admin" && NovaUloga != "korisnik") {
+			res.status = 400;
+			res.set_content("{\"Greska\":\"Nedozvoljena uloga\"}", "application/json");
+			return;
+		}
+		string auth = req.get_header_value("Authorization");
+		string Prefiks = "Bearer ";
+		string token = auth.substr(Prefiks.size());
+		string Pozivalac;
+		{
+			std::lock_guard<mutex>lockSesije(sesijeMutex);
+			auto it = sesije.find(token);
+			if (it == sesije.end()) {
+				res.status = 401;
+				res.set_content("{\"Greska\":\"Neispravan token\"}", "application/json");
+				return;
+			}
+			Pozivalac = it->second.UserName;
+		}
+		string Meta=req.path_params.at("username");
+		std::lock_guard<mutex>lockUloga(ulogaMutex);
+		string StaraUloga = baza.UzmiUlogu(Meta);
+		if (StaraUloga.empty()) {
+			res.status = 404;
+			res.set_content("{\"Greska\":\"Korisnik ne postoji\"}", "application/json");
+			return;
+		}
+		if (StaraUloga == NovaUloga) {
+			res.status = 200;
+			res.set_content("{\"Poruka\":\"Uloga je vec promijenjena\"}", "application/json");
+			return;
+		}
+		if (StaraUloga == "admin") {
+			int BrojAdmina = baza.BrojAdmina("admin");
+			if (BrojAdmina < 0) {
+				res.status = 500;
+				res.set_content("{\"Greska\":\"Greska baze\"}", "application/json");
+				return;
+			}
+			if (BrojAdmina <= 1 || Meta == Pozivalac) {
+				res.status = 409;
+				res.set_content("{\"Greska\":\"Ne mozete ukloniti posljednjeg admina ili sami sebe\"}", "application/json");
+				return;
+			}
+		}
+		if (!baza.PostaviUlogu(Meta, "uloga")) {
+			res.status = 400;
+			res.set_content("{\"Greska\":\"Greska pri azuriranju uloge\"}", "application/json");
+			return;
+		}
+		{
+			std::lock_guard<mutex>lockSesije(sesijeMutex);
+			for (auto it = sesije.begin(); it != sesije.end();) {
+				if (it->second.UserName == Meta) {
+					it = sesije.erase(it);
+				}
+				else {
+					++it;
+				}
+			}
+		}
+		res.status = 200;
+		res.set_content("{\"Poruka\":\"Uloga uspijesno postavljena\"}", "application/json");
 		});
 	server.Get("/", [](const httplib::Request& req, httplib::Response& res) {
 		res.set_content("Server radi!!!", "text/plain");
